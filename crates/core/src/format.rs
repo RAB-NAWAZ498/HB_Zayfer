@@ -354,6 +354,10 @@ pub fn decrypt_stream<R: Read, W: Write>(
     let mut chunk_index: u64 = 0;
     let mut total_written: u64 = 0;
 
+    // Maximum allowed encrypted chunk size = CHUNK_SIZE + 16 (AEAD tag).
+    // Reject anything larger to prevent OOM from malicious files.
+    const MAX_CHUNK_LEN: usize = CHUNK_SIZE + 16;
+
     loop {
         // Read chunk length
         let mut len_buf = [0u8; 4];
@@ -363,6 +367,13 @@ pub fn decrypt_stream<R: Read, W: Write>(
             Err(e) => return Err(e.into()),
         }
         let chunk_len = u32::from_le_bytes(len_buf) as usize;
+
+        // Guard against malicious chunk lengths
+        if chunk_len > MAX_CHUNK_LEN {
+            return Err(HbError::InvalidFormat(format!(
+                "Chunk length {chunk_len} exceeds maximum {MAX_CHUNK_LEN}"
+            )));
+        }
 
         // Read encrypted chunk
         let mut encrypted = vec![0u8; chunk_len];
@@ -384,6 +395,14 @@ pub fn decrypt_stream<R: Read, W: Write>(
         if let Some(ref mut cb) = progress_callback {
             cb(total_written);
         }
+    }
+
+    // Verify total decrypted length matches header to detect truncation
+    if header.plaintext_len != 0 && total_written != header.plaintext_len {
+        return Err(HbError::InvalidFormat(format!(
+            "Truncation detected: expected {} bytes, got {total_written}",
+            header.plaintext_len
+        )));
     }
 
     writer.flush()?;

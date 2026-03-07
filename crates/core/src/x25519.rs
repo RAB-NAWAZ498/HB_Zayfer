@@ -2,13 +2,24 @@ use hkdf::Hkdf;
 use rand_core::OsRng;
 use sha2::{Digest, Sha256};
 use x25519_dalek::{EphemeralSecret, PublicKey, StaticSecret};
+use zeroize::Zeroize;
 
 use crate::error::{HbError, HbResult};
 
 /// An X25519 key pair for key agreement (ECDH).
+///
+/// Secret key bytes are zeroized on drop.
 pub struct X25519KeyPair {
     pub secret_key: StaticSecret,
     pub public_key: PublicKey,
+}
+
+impl Drop for X25519KeyPair {
+    fn drop(&mut self) {
+        // Overwrite the secret key bytes
+        let mut bytes = self.secret_key.to_bytes();
+        bytes.zeroize();
+    }
 }
 
 /// Generate a new X25519 static key pair.

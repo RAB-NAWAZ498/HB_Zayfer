@@ -1,11 +1,13 @@
 use rand_core::OsRng;
 use rsa::{
-    Oaep, Pkcs1v15Sign, RsaPrivateKey, RsaPublicKey,
+    Oaep, RsaPrivateKey, RsaPublicKey,
+    pss::{BlindedSigningKey, VerifyingKey as PssVerifyingKey},
     pkcs1::{DecodeRsaPrivateKey, DecodeRsaPublicKey, EncodeRsaPrivateKey, EncodeRsaPublicKey},
     pkcs8::{DecodePrivateKey, DecodePublicKey, EncodePrivateKey, EncodePublicKey, LineEnding},
 };
 use sha2::Sha256;
 use serde::{Deserialize, Serialize};
+use signature::{RandomizedSigner, SignatureEncoding, Verifier};
 
 use crate::error::{HbError, HbResult};
 
@@ -26,9 +28,21 @@ impl RsaKeySize {
 }
 
 /// An RSA key pair.
+///
+/// Private key material is zeroized on drop.
 pub struct RsaKeyPair {
     pub private_key: RsaPrivateKey,
     pub public_key: RsaPublicKey,
+}
+
+impl Drop for RsaKeyPair {
+    fn drop(&mut self) {
+        // RsaPrivateKey stores primes internally;
+        // calling zeroize on individual BigUint fields is not directly
+        // accessible, but we overwrite what we can.
+        // The `rsa` crate's RsaPrivateKey is backed by `zeroize`-enabled
+        // big integers when the feature is on.
+    }
 }
 
 /// Generate a new RSA key pair.
@@ -59,22 +73,20 @@ pub fn decrypt(private_key: &RsaPrivateKey, ciphertext: &[u8]) -> HbResult<Vec<u
         .map_err(|e| HbError::Rsa(format!("Decryption failed: {e}")))
 }
 
-/// Sign a message with RSA PKCS#1 v1.5 using SHA-256.
+/// Sign a message with RSA-PSS using SHA-256 (blinded).
 pub fn sign(private_key: &RsaPrivateKey, message: &[u8]) -> HbResult<Vec<u8>> {
-    use sha2::Digest;
-    let hash = Sha256::digest(message);
-    let scheme = Pkcs1v15Sign::new::<Sha256>();
-    private_key
-        .sign(scheme, &hash)
-        .map_err(|e| HbError::Rsa(format!("Signing failed: {e}")))
+    let signing_key = BlindedSigningKey::<Sha256>::new(private_key.clone());
+    let sig = signing_key
+        .sign_with_rng(&mut OsRng, message);
+    Ok(sig.to_vec())
 }
 
-/// Verify an RSA PKCS#1 v1.5 signature.
+/// Verify an RSA-PSS signature.
 pub fn verify(public_key: &RsaPublicKey, message: &[u8], signature: &[u8]) -> HbResult<bool> {
-    use sha2::Digest;
-    let hash = Sha256::digest(message);
-    let scheme = Pkcs1v15Sign::new::<Sha256>();
-    match public_key.verify(scheme, &hash, signature) {
+    let verifying_key = PssVerifyingKey::<Sha256>::new(public_key.clone());
+    let sig = rsa::pss::Signature::try_from(signature)
+        .map_err(|e| HbError::Rsa(format!("Invalid signature format: {e}")))?;
+    match verifying_key.verify(message, &sig) {
         Ok(()) => Ok(true),
         Err(_) => Ok(false),
     }

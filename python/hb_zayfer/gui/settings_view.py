@@ -1,6 +1,9 @@
-"""Settings view — application preferences."""
+"""Settings view — application preferences with persistence."""
 
 from __future__ import annotations
+
+import json
+from pathlib import Path
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
@@ -19,12 +22,51 @@ from PySide6.QtWidgets import (
 import hb_zayfer as hbz
 
 
+def _config_path() -> Path:
+    """Return path to config.json inside the keystore directory."""
+    try:
+        ks = hbz.KeyStore()
+        return Path(ks.base_path) / "config.json"
+    except Exception:
+        return Path.home() / ".hb_zayfer" / "config.json"
+
+
+def _load_config() -> dict:
+    """Load persisted settings, returning defaults on any error."""
+    p = _config_path()
+    defaults = {
+        "cipher": "AES-256-GCM",
+        "kdf": "Argon2id",
+        "argon2_memory_mib": 64,
+        "argon2_iterations": 3,
+    }
+    if p.exists():
+        try:
+            with open(p) as f:
+                saved = json.load(f)
+            defaults.update(saved)
+        except Exception:
+            pass
+    return defaults
+
+
+def _save_config(cfg: dict) -> None:
+    """Persist settings to config.json (atomic write)."""
+    p = _config_path()
+    p.parent.mkdir(parents=True, exist_ok=True)
+    tmp = p.with_suffix(".tmp")
+    with open(tmp, "w") as f:
+        json.dump(cfg, f, indent=2)
+    tmp.rename(p)
+
+
 class SettingsView(QWidget):
     """Application settings and preferences."""
 
     def __init__(self) -> None:
         super().__init__()
         self._setup_ui()
+        self._load_persisted()
 
     def _setup_ui(self) -> None:
         layout = QVBoxLayout(self)
@@ -103,4 +145,58 @@ class SettingsView(QWidget):
         info_layout.addWidget(QLabel("License: MIT"))
         layout.addWidget(info_box)
 
+        # Save / Reset buttons
+        btn_row = QHBoxLayout()
+        save_btn = QPushButton("Save Settings")
+        save_btn.clicked.connect(self._on_save)
+        btn_row.addWidget(save_btn)
+
+        reset_btn = QPushButton("Reset to Defaults")
+        reset_btn.clicked.connect(self._on_reset)
+        btn_row.addWidget(reset_btn)
+
+        btn_row.addStretch()
+        layout.addLayout(btn_row)
+
         layout.addStretch()
+
+    # ---- Persistence --------------------------------------------------
+
+    def _load_persisted(self) -> None:
+        """Load saved settings into the UI widgets."""
+        cfg = _load_config()
+        idx = self.algo_combo.findText(cfg.get("cipher", "AES-256-GCM"))
+        if idx >= 0:
+            self.algo_combo.setCurrentIndex(idx)
+        idx = self.kdf_combo.findText(cfg.get("kdf", "Argon2id"))
+        if idx >= 0:
+            self.kdf_combo.setCurrentIndex(idx)
+        self.mem_spin.setValue(cfg.get("argon2_memory_mib", 64))
+        self.iter_spin.setValue(cfg.get("argon2_iterations", 3))
+
+    def _current_config(self) -> dict:
+        """Gather current widget values into a config dict."""
+        return {
+            "cipher": self.algo_combo.currentText(),
+            "kdf": self.kdf_combo.currentText(),
+            "argon2_memory_mib": self.mem_spin.value(),
+            "argon2_iterations": self.iter_spin.value(),
+        }
+
+    def _on_save(self) -> None:
+        try:
+            _save_config(self._current_config())
+            QMessageBox.information(self, "Settings", "Settings saved successfully.")
+        except Exception as exc:
+            QMessageBox.warning(self, "Error", f"Failed to save settings:\n{exc}")
+
+    def _on_reset(self) -> None:
+        self.algo_combo.setCurrentIndex(0)
+        self.kdf_combo.setCurrentIndex(0)
+        self.mem_spin.setValue(64)
+        self.iter_spin.setValue(3)
+        try:
+            _save_config(self._current_config())
+        except Exception:
+            pass
+        QMessageBox.information(self, "Settings", "Settings reset to defaults.")

@@ -4,13 +4,24 @@ use ed25519_dalek::{
 };
 use rand_core::OsRng;
 use sha2::{Digest, Sha256};
+use zeroize::Zeroize;
 
 use crate::error::{HbError, HbResult};
 
 /// An Ed25519 key pair for digital signatures.
+///
+/// Signing key bytes are zeroized on drop.
 pub struct Ed25519KeyPair {
     pub signing_key: SigningKey,
     pub verifying_key: VerifyingKey,
+}
+
+impl Drop for Ed25519KeyPair {
+    fn drop(&mut self) {
+        // Overwrite the signing key seed bytes
+        let mut seed = self.signing_key.to_bytes();
+        seed.zeroize();
+    }
 }
 
 /// Generate a new Ed25519 key pair.

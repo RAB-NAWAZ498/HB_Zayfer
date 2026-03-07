@@ -48,6 +48,12 @@ function resultBox(el, ok, msg) {
     show(el);
 }
 
+function esc(str) {
+    const d = document.createElement("div");
+    d.textContent = str;
+    return d.innerHTML;
+}
+
 function truncFp(fp) {
     return fp.length > 16 ? fp.slice(0, 8) + "…" + fp.slice(-8) : fp;
 }
@@ -180,14 +186,14 @@ async function refreshKeys() {
         for (const k of keys) {
             const tr = document.createElement("tr");
             tr.innerHTML = `
-                <td title="${k.fingerprint}">${truncFp(k.fingerprint)}</td>
-                <td>${k.algorithm}</td>
-                <td>${k.label}</td>
-                <td>${k.created_at.slice(0, 10)}</td>
+                <td title="${esc(k.fingerprint)}">${esc(truncFp(k.fingerprint))}</td>
+                <td>${esc(k.algorithm)}</td>
+                <td>${esc(k.label)}</td>
+                <td>${esc(k.created_at.slice(0, 10))}</td>
                 <td>${k.has_private ? "✓" : "—"}</td>
                 <td>${k.has_public ? "✓" : "—"}</td>
                 <td>
-                    <button class="btn-danger btn-del-key" data-fp="${k.fingerprint}">Delete</button>
+                    <button class="btn-danger btn-del-key" data-fp="${esc(k.fingerprint)}">Delete</button>
                 </td>`;
             tbody.appendChild(tr);
         }
@@ -230,12 +236,12 @@ async function refreshContacts() {
         for (const c of contacts) {
             const tr = document.createElement("tr");
             tr.innerHTML = `
-                <td>${c.name}</td>
-                <td>${c.email || "—"}</td>
-                <td>${c.key_fingerprints.map(truncFp).join(", ") || "—"}</td>
-                <td>${c.created_at.slice(0, 10)}</td>
+                <td>${esc(c.name)}</td>
+                <td>${esc(c.email || "—")}</td>
+                <td>${c.key_fingerprints.map(truncFp).map(esc).join(", ") || "—"}</td>
+                <td>${esc(c.created_at.slice(0, 10))}</td>
                 <td>
-                    <button class="btn-danger btn-del-ct" data-name="${c.name}">Remove</button>
+                    <button class="btn-danger btn-del-ct" data-name="${esc(c.name)}">Remove</button>
                 </td>`;
             tbody.appendChild(tr);
         }

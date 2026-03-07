@@ -712,8 +712,37 @@ fn cmd_keys_import(
     let fmt = keystore::detect_key_format(&data);
     let label = label.unwrap_or_else(|| file.to_string());
 
+    // Determine algorithm from detected format
+    let algorithm = match &fmt {
+        keystore::KeyFormat::OpenPgpArmor => KeyAlgorithm::Pgp,
+        keystore::KeyFormat::OpenSsh => {
+            // Inspect text prefix for algorithm hint
+            if let Ok(text) = std::str::from_utf8(&data) {
+                if text.starts_with("ssh-rsa") {
+                    KeyAlgorithm::Rsa2048
+                } else {
+                    KeyAlgorithm::Ed25519
+                }
+            } else {
+                KeyAlgorithm::Ed25519
+            }
+        }
+        _ => {
+            // PEM/DER: check for RSA markers
+            if let Ok(text) = std::str::from_utf8(&data) {
+                if text.contains("RSA") {
+                    KeyAlgorithm::Rsa2048
+                } else {
+                    KeyAlgorithm::Ed25519
+                }
+            } else {
+                KeyAlgorithm::Ed25519
+            }
+        }
+    };
+
     let fp = keystore::compute_fingerprint(&data);
-    keystore.store_public_key(&fp, &data, KeyAlgorithm::Ed25519, &label)?;
+    keystore.store_public_key(&fp, &data, algorithm, &label)?;
 
     println!("Key imported:");
     println!("  Fingerprint: {fp}");

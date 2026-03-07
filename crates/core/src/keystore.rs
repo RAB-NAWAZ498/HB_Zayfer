@@ -155,17 +155,25 @@ impl KeyStore {
         })
     }
 
-    /// Save the keyring index to disk.
-    fn save_index(&self) -> HbResult<()> {
-        let data = serde_json::to_string_pretty(&self.index)?;
-        fs::write(self.base_path.join("keyring.json"), data)?;
+    /// Atomically save data to a file using write-then-rename.
+    fn atomic_write(path: &Path, data: &[u8]) -> HbResult<()> {
+        let tmp = path.with_extension("tmp");
+        fs::write(&tmp, data)?;
+        fs::rename(&tmp, path)?;
         Ok(())
     }
 
-    /// Save contacts to disk.
+    /// Save the keyring index to disk (atomic).
+    fn save_index(&self) -> HbResult<()> {
+        let data = serde_json::to_string_pretty(&self.index)?;
+        Self::atomic_write(&self.base_path.join("keyring.json"), data.as_bytes())?;
+        Ok(())
+    }
+
+    /// Save contacts to disk (atomic).
     fn save_contacts(&self) -> HbResult<()> {
         let data = serde_json::to_string_pretty(&self.contacts)?;
-        fs::write(self.base_path.join("contacts.json"), data)?;
+        Self::atomic_write(&self.base_path.join("contacts.json"), data.as_bytes())?;
         Ok(())
     }
 
@@ -175,6 +183,20 @@ impl KeyStore {
     }
 
     // -- Key storage --
+
+    /// Private key envelope version.
+    ///
+    /// Version 2 stores KDF metadata so key decryption works even if
+    /// global defaults change:
+    /// ```text
+    /// [1B] envelope version (0x02)
+    /// [1B] KDF algorithm ID
+    /// [12B] KDF params (same layout as HBZF header)
+    /// [16B] salt
+    /// [12B] nonce
+    /// [...] AES-256-GCM ciphertext
+    /// ```
+    const KEY_ENVELOPE_VERSION: u8 = 0x02;
 
     /// Store a private key (encrypted with passphrase).
     pub fn store_private_key(
@@ -193,8 +215,23 @@ impl KeyStore {
         // Encrypt the private key with AES-256-GCM
         let (nonce, ciphertext) = aes_gcm::encrypt(&enc_key, key_bytes, fingerprint.as_bytes())?;
 
-        // Build envelope: salt(16) + nonce(12) + ciphertext
+        // Build versioned envelope: version(1) + kdf_id(1) + kdf_params(12) + salt(16) + nonce(12) + ciphertext
         let mut envelope = Vec::new();
+        envelope.push(Self::KEY_ENVELOPE_VERSION);
+        envelope.push(kdf_params.algorithm().id());
+        match &kdf_params {
+            KdfParams::Argon2id(p) => {
+                envelope.extend_from_slice(&p.m_cost.to_le_bytes());
+                envelope.extend_from_slice(&p.t_cost.to_le_bytes());
+                envelope.extend_from_slice(&p.p_cost.to_le_bytes());
+            }
+            KdfParams::Scrypt(p) => {
+                envelope.push(p.log_n);
+                envelope.extend_from_slice(&[0u8; 3]); // padding
+                envelope.extend_from_slice(&p.r.to_le_bytes());
+                envelope.extend_from_slice(&p.p.to_le_bytes());
+            }
+        }
         envelope.extend_from_slice(&salt);
         envelope.extend_from_slice(&nonce);
         envelope.extend_from_slice(&ciphertext);
@@ -259,6 +296,8 @@ impl KeyStore {
     }
 
     /// Load an encrypted private key, decrypting with the passphrase.
+    ///
+    /// Supports both v1 (legacy: no header) and v2 (versioned with embedded KDF params).
     pub fn load_private_key(&self, fingerprint: &str, passphrase: &[u8]) -> HbResult<Vec<u8>> {
         let key_path = self.base_path.join("keys/private").join(format!("{fingerprint}.key"));
         if !key_path.exists() {
@@ -266,16 +305,44 @@ impl KeyStore {
         }
 
         let envelope = fs::read(&key_path)?;
-        if envelope.len() < 28 {
-            // 16 (salt) + 12 (nonce) minimum
-            return Err(HbError::InvalidFormat("Key file too short".into()));
-        }
 
-        let salt = &envelope[..16];
-        let nonce = &envelope[16..28];
-        let ciphertext = &envelope[28..];
+        // Detect envelope version
+        let (kdf_params, salt, nonce, ciphertext) = if !envelope.is_empty() && envelope[0] == Self::KEY_ENVELOPE_VERSION {
+            // V2 envelope: version(1) + kdf_id(1) + kdf_params(12) + salt(16) + nonce(12) + ct
+            if envelope.len() < 1 + 1 + 12 + 16 + 12 {
+                return Err(HbError::InvalidFormat("V2 key envelope too short".into()));
+            }
+            let kdf_id = envelope[1];
+            let kdf_param_bytes = &envelope[2..14];
+            let kdf_p = match kdf::KdfAlgorithm::from_id(kdf_id)? {
+                kdf::KdfAlgorithm::Argon2id => {
+                    let m = u32::from_le_bytes(kdf_param_bytes[0..4].try_into().unwrap());
+                    let t = u32::from_le_bytes(kdf_param_bytes[4..8].try_into().unwrap());
+                    let p = u32::from_le_bytes(kdf_param_bytes[8..12].try_into().unwrap());
+                    KdfParams::Argon2id(kdf::Argon2Params { m_cost: m, t_cost: t, p_cost: p })
+                }
+                kdf::KdfAlgorithm::Scrypt => {
+                    let log_n = kdf_param_bytes[0];
+                    let r = u32::from_le_bytes(kdf_param_bytes[4..8].try_into().unwrap());
+                    let p = u32::from_le_bytes(kdf_param_bytes[8..12].try_into().unwrap());
+                    KdfParams::Scrypt(kdf::ScryptParams { log_n, r, p })
+                }
+            };
+            let salt = &envelope[14..30];
+            let nonce = &envelope[30..42];
+            let ciphertext = &envelope[42..];
+            (kdf_p, salt, nonce, ciphertext)
+        } else {
+            // V1 (legacy) envelope: salt(16) + nonce(12) + ciphertext
+            if envelope.len() < 28 {
+                return Err(HbError::InvalidFormat("Key file too short".into()));
+            }
+            let salt = &envelope[..16];
+            let nonce = &envelope[16..28];
+            let ciphertext = &envelope[28..];
+            (KdfParams::default(), salt, nonce, ciphertext)
+        };
 
-        let kdf_params = KdfParams::default();
         let enc_key = kdf::derive_key(passphrase, salt, &kdf_params)?;
 
         aes_gcm::decrypt(&enc_key, nonce, ciphertext, fingerprint.as_bytes())
